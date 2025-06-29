@@ -33,6 +33,12 @@ Partial Class FormMain
         Me.Label3 = New System.Windows.Forms.Label()
         Me.CheckBox_RemoveDup = New System.Windows.Forms.CheckBox()
         Me.GroupBox2 = New System.Windows.Forms.GroupBox()
+        Me.Label_StabZoom = New System.Windows.Forms.Label()
+        Me.TrackBar_StabZoom = New System.Windows.Forms.TrackBar()
+        Me.Label7 = New System.Windows.Forms.Label()
+        Me.NumericUpDown_StabOptZoomSpeed = New System.Windows.Forms.NumericUpDown()
+        Me.Label6 = New System.Windows.Forms.Label()
+        Me.ComboBox_StabOptZoom = New System.Windows.Forms.ComboBox()
         Me.Label_Smoothing = New System.Windows.Forms.Label()
         Me.TrackBar_StabSmooth = New System.Windows.Forms.TrackBar()
         Me.Label_Accuracy = New System.Windows.Forms.Label()
@@ -48,8 +54,12 @@ Partial Class FormMain
         Me.ProgressBar_Progress = New System.Windows.Forms.ProgressBar()
         Me.CheckBox_PreviewMode = New System.Windows.Forms.CheckBox()
         Me.ToolTip1 = New System.Windows.Forms.ToolTip(Me.components)
+        Me.Label8 = New System.Windows.Forms.Label()
+        Me.ComboBox_HwAcceleration = New System.Windows.Forms.ComboBox()
         Me.GroupBox1.SuspendLayout()
         Me.GroupBox2.SuspendLayout()
+        CType(Me.TrackBar_StabZoom, System.ComponentModel.ISupportInitialize).BeginInit()
+        CType(Me.NumericUpDown_StabOptZoomSpeed, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.TrackBar_StabSmooth, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.TrackBar_StabAccuracy, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.TrackBar_StabShakiness, System.ComponentModel.ISupportInitialize).BeginInit()
@@ -149,8 +159,15 @@ Partial Class FormMain
         '
         'GroupBox2
         '
-        Me.GroupBox2.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+        Me.GroupBox2.Anchor = CType((((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Bottom) _
+            Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.GroupBox2.Controls.Add(Me.Label_StabZoom)
+        Me.GroupBox2.Controls.Add(Me.TrackBar_StabZoom)
+        Me.GroupBox2.Controls.Add(Me.Label7)
+        Me.GroupBox2.Controls.Add(Me.NumericUpDown_StabOptZoomSpeed)
+        Me.GroupBox2.Controls.Add(Me.Label6)
+        Me.GroupBox2.Controls.Add(Me.ComboBox_StabOptZoom)
         Me.GroupBox2.Controls.Add(Me.Label_Smoothing)
         Me.GroupBox2.Controls.Add(Me.TrackBar_StabSmooth)
         Me.GroupBox2.Controls.Add(Me.Label_Accuracy)
@@ -159,10 +176,74 @@ Partial Class FormMain
         Me.GroupBox2.Controls.Add(Me.TrackBar_StabShakiness)
         Me.GroupBox2.Location = New System.Drawing.Point(12, 174)
         Me.GroupBox2.Name = "GroupBox2"
-        Me.GroupBox2.Size = New System.Drawing.Size(643, 96)
+        Me.GroupBox2.Size = New System.Drawing.Size(643, 174)
         Me.GroupBox2.TabIndex = 7
         Me.GroupBox2.TabStop = False
-        Me.GroupBox2.Text = "Stabilizations settings"
+        Me.GroupBox2.Text = "Stabilization settings"
+        '
+        'Label_StabZoom
+        '
+        Me.Label_StabZoom.AutoSize = True
+        Me.Label_StabZoom.Location = New System.Drawing.Point(6, 87)
+        Me.Label_StabZoom.Name = "Label_StabZoom"
+        Me.Label_StabZoom.Size = New System.Drawing.Size(36, 13)
+        Me.Label_StabZoom.TabIndex = 11
+        Me.Label_StabZoom.Text = "Zoom"
+        '
+        'TrackBar_StabZoom
+        '
+        Me.TrackBar_StabZoom.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.TrackBar_StabZoom.AutoSize = False
+        Me.TrackBar_StabZoom.LargeChange = 1
+        Me.TrackBar_StabZoom.Location = New System.Drawing.Point(109, 87)
+        Me.TrackBar_StabZoom.Maximum = 100
+        Me.TrackBar_StabZoom.Minimum = -100
+        Me.TrackBar_StabZoom.Name = "TrackBar_StabZoom"
+        Me.TrackBar_StabZoom.Size = New System.Drawing.Size(528, 16)
+        Me.TrackBar_StabZoom.TabIndex = 10
+        '
+        'Label7
+        '
+        Me.Label7.AutoSize = True
+        Me.Label7.Location = New System.Drawing.Point(6, 138)
+        Me.Label7.Name = "Label7"
+        Me.Label7.Size = New System.Drawing.Size(97, 13)
+        Me.Label7.TabIndex = 9
+        Me.Label7.Text = "Auto zoom speed"
+        '
+        'NumericUpDown_StabOptZoomSpeed
+        '
+        Me.NumericUpDown_StabOptZoomSpeed.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.NumericUpDown_StabOptZoomSpeed.DecimalPlaces = 2
+        Me.NumericUpDown_StabOptZoomSpeed.Increment = New Decimal(New Integer() {5, 0, 0, 131072})
+        Me.NumericUpDown_StabOptZoomSpeed.Location = New System.Drawing.Point(109, 136)
+        Me.NumericUpDown_StabOptZoomSpeed.Maximum = New Decimal(New Integer() {5, 0, 0, 0})
+        Me.NumericUpDown_StabOptZoomSpeed.Name = "NumericUpDown_StabOptZoomSpeed"
+        Me.NumericUpDown_StabOptZoomSpeed.Size = New System.Drawing.Size(528, 22)
+        Me.NumericUpDown_StabOptZoomSpeed.TabIndex = 8
+        Me.NumericUpDown_StabOptZoomSpeed.Value = New Decimal(New Integer() {25, 0, 0, 131072})
+        '
+        'Label6
+        '
+        Me.Label6.AutoSize = True
+        Me.Label6.Location = New System.Drawing.Point(6, 112)
+        Me.Label6.Name = "Label6"
+        Me.Label6.Size = New System.Drawing.Size(63, 13)
+        Me.Label6.TabIndex = 7
+        Me.Label6.Text = "Auto zoom"
+        '
+        'ComboBox_StabOptZoom
+        '
+        Me.ComboBox_StabOptZoom.Anchor = CType(((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.ComboBox_StabOptZoom.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
+        Me.ComboBox_StabOptZoom.FormattingEnabled = True
+        Me.ComboBox_StabOptZoom.Location = New System.Drawing.Point(109, 109)
+        Me.ComboBox_StabOptZoom.Name = "ComboBox_StabOptZoom"
+        Me.ComboBox_StabOptZoom.Size = New System.Drawing.Size(528, 21)
+        Me.ComboBox_StabOptZoom.TabIndex = 6
         '
         'Label_Smoothing
         '
@@ -179,10 +260,10 @@ Partial Class FormMain
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.TrackBar_StabSmooth.AutoSize = False
         Me.TrackBar_StabSmooth.LargeChange = 1
-        Me.TrackBar_StabSmooth.Location = New System.Drawing.Point(97, 65)
+        Me.TrackBar_StabSmooth.Location = New System.Drawing.Point(109, 65)
         Me.TrackBar_StabSmooth.Maximum = 100
         Me.TrackBar_StabSmooth.Name = "TrackBar_StabSmooth"
-        Me.TrackBar_StabSmooth.Size = New System.Drawing.Size(540, 16)
+        Me.TrackBar_StabSmooth.Size = New System.Drawing.Size(528, 16)
         Me.TrackBar_StabSmooth.TabIndex = 4
         Me.TrackBar_StabSmooth.Value = 10
         '
@@ -201,11 +282,11 @@ Partial Class FormMain
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.TrackBar_StabAccuracy.AutoSize = False
         Me.TrackBar_StabAccuracy.LargeChange = 1
-        Me.TrackBar_StabAccuracy.Location = New System.Drawing.Point(97, 43)
+        Me.TrackBar_StabAccuracy.Location = New System.Drawing.Point(109, 43)
         Me.TrackBar_StabAccuracy.Maximum = 15
         Me.TrackBar_StabAccuracy.Minimum = 1
         Me.TrackBar_StabAccuracy.Name = "TrackBar_StabAccuracy"
-        Me.TrackBar_StabAccuracy.Size = New System.Drawing.Size(540, 16)
+        Me.TrackBar_StabAccuracy.Size = New System.Drawing.Size(528, 16)
         Me.TrackBar_StabAccuracy.TabIndex = 2
         Me.TrackBar_StabAccuracy.Value = 15
         '
@@ -224,17 +305,17 @@ Partial Class FormMain
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.TrackBar_StabShakiness.AutoSize = False
         Me.TrackBar_StabShakiness.LargeChange = 1
-        Me.TrackBar_StabShakiness.Location = New System.Drawing.Point(97, 21)
+        Me.TrackBar_StabShakiness.Location = New System.Drawing.Point(109, 21)
         Me.TrackBar_StabShakiness.Minimum = 1
         Me.TrackBar_StabShakiness.Name = "TrackBar_StabShakiness"
-        Me.TrackBar_StabShakiness.Size = New System.Drawing.Size(540, 16)
+        Me.TrackBar_StabShakiness.Size = New System.Drawing.Size(528, 16)
         Me.TrackBar_StabShakiness.TabIndex = 0
         Me.TrackBar_StabShakiness.Value = 5
         '
         'Button_FileProcess
         '
         Me.Button_FileProcess.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.Button_FileProcess.Location = New System.Drawing.Point(580, 323)
+        Me.Button_FileProcess.Location = New System.Drawing.Point(580, 408)
         Me.Button_FileProcess.Name = "Button_FileProcess"
         Me.Button_FileProcess.Size = New System.Drawing.Size(75, 23)
         Me.Button_FileProcess.TabIndex = 8
@@ -281,7 +362,7 @@ Partial Class FormMain
         Me.ComboBox_EncodeQuality.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left), System.Windows.Forms.AnchorStyles)
         Me.ComboBox_EncodeQuality.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.ComboBox_EncodeQuality.FormattingEnabled = True
-        Me.ComboBox_EncodeQuality.Location = New System.Drawing.Point(102, 325)
+        Me.ComboBox_EncodeQuality.Location = New System.Drawing.Point(140, 381)
         Me.ComboBox_EncodeQuality.Name = "ComboBox_EncodeQuality"
         Me.ComboBox_EncodeQuality.Size = New System.Drawing.Size(160, 21)
         Me.ComboBox_EncodeQuality.TabIndex = 10
@@ -290,7 +371,7 @@ Partial Class FormMain
         '
         Me.Label5.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left), System.Windows.Forms.AnchorStyles)
         Me.Label5.AutoSize = True
-        Me.Label5.Location = New System.Drawing.Point(12, 328)
+        Me.Label5.Location = New System.Drawing.Point(12, 384)
         Me.Label5.Name = "Label5"
         Me.Label5.Size = New System.Drawing.Size(84, 13)
         Me.Label5.TabIndex = 11
@@ -300,16 +381,16 @@ Partial Class FormMain
         '
         Me.ProgressBar_Progress.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.ProgressBar_Progress.Location = New System.Drawing.Point(268, 323)
+        Me.ProgressBar_Progress.Location = New System.Drawing.Point(12, 408)
         Me.ProgressBar_Progress.Name = "ProgressBar_Progress"
-        Me.ProgressBar_Progress.Size = New System.Drawing.Size(306, 23)
+        Me.ProgressBar_Progress.Size = New System.Drawing.Size(562, 23)
         Me.ProgressBar_Progress.TabIndex = 12
         '
         'CheckBox_PreviewMode
         '
         Me.CheckBox_PreviewMode.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left), System.Windows.Forms.AnchorStyles)
         Me.CheckBox_PreviewMode.AutoSize = True
-        Me.CheckBox_PreviewMode.Location = New System.Drawing.Point(12, 302)
+        Me.CheckBox_PreviewMode.Location = New System.Drawing.Point(306, 384)
         Me.CheckBox_PreviewMode.Name = "CheckBox_PreviewMode"
         Me.CheckBox_PreviewMode.Size = New System.Drawing.Size(98, 17)
         Me.CheckBox_PreviewMode.TabIndex = 13
@@ -317,12 +398,34 @@ Partial Class FormMain
         Me.ToolTip1.SetToolTip(Me.CheckBox_PreviewMode, "Speeds up the encoding by reducing the video resolution and faster compression")
         Me.CheckBox_PreviewMode.UseVisualStyleBackColor = True
         '
+        'Label8
+        '
+        Me.Label8.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left), System.Windows.Forms.AnchorStyles)
+        Me.Label8.AutoSize = True
+        Me.Label8.Location = New System.Drawing.Point(12, 358)
+        Me.Label8.Name = "Label8"
+        Me.Label8.Size = New System.Drawing.Size(122, 13)
+        Me.Label8.TabIndex = 14
+        Me.Label8.Text = "Hardware acceleration"
+        '
+        'ComboBox_HwAcceleration
+        '
+        Me.ComboBox_HwAcceleration.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left), System.Windows.Forms.AnchorStyles)
+        Me.ComboBox_HwAcceleration.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
+        Me.ComboBox_HwAcceleration.FormattingEnabled = True
+        Me.ComboBox_HwAcceleration.Location = New System.Drawing.Point(140, 354)
+        Me.ComboBox_HwAcceleration.Name = "ComboBox_HwAcceleration"
+        Me.ComboBox_HwAcceleration.Size = New System.Drawing.Size(160, 21)
+        Me.ComboBox_HwAcceleration.TabIndex = 15
+        '
         'FormMain
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(96.0!, 96.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi
         Me.BackColor = System.Drawing.Color.White
-        Me.ClientSize = New System.Drawing.Size(667, 358)
+        Me.ClientSize = New System.Drawing.Size(667, 443)
+        Me.Controls.Add(Me.ComboBox_HwAcceleration)
+        Me.Controls.Add(Me.Label8)
         Me.Controls.Add(Me.CheckBox_PreviewMode)
         Me.Controls.Add(Me.ProgressBar_Progress)
         Me.Controls.Add(Me.Label5)
@@ -349,6 +452,8 @@ Partial Class FormMain
         Me.GroupBox1.PerformLayout()
         Me.GroupBox2.ResumeLayout(False)
         Me.GroupBox2.PerformLayout()
+        CType(Me.TrackBar_StabZoom, System.ComponentModel.ISupportInitialize).EndInit()
+        CType(Me.NumericUpDown_StabOptZoomSpeed, System.ComponentModel.ISupportInitialize).EndInit()
         CType(Me.TrackBar_StabSmooth, System.ComponentModel.ISupportInitialize).EndInit()
         CType(Me.TrackBar_StabAccuracy, System.ComponentModel.ISupportInitialize).EndInit()
         CType(Me.TrackBar_StabShakiness, System.ComponentModel.ISupportInitialize).EndInit()
@@ -384,4 +489,12 @@ Partial Class FormMain
     Friend WithEvents ProgressBar_Progress As ProgressBar
     Friend WithEvents CheckBox_PreviewMode As CheckBox
     Friend WithEvents ToolTip1 As ToolTip
+    Friend WithEvents Label6 As Label
+    Friend WithEvents ComboBox_StabOptZoom As ComboBox
+    Friend WithEvents Label7 As Label
+    Friend WithEvents NumericUpDown_StabOptZoomSpeed As NumericUpDown
+    Friend WithEvents Label_StabZoom As Label
+    Friend WithEvents TrackBar_StabZoom As TrackBar
+    Friend WithEvents Label8 As Label
+    Friend WithEvents ComboBox_HwAcceleration As ComboBox
 End Class

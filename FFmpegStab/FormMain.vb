@@ -19,18 +19,69 @@ Public Class FormMain
 
     End Structure
 
+    Structure STURC_OPTIMAL_ZOOM
+        Enum ENUM_ZOOM_TYPE
+            NONE
+            DYNAMIC
+            OPTIMAL
+        End Enum
+
+        Dim iZoom As ENUM_ZOOM_TYPE
+        Dim sText As String
+
+        Sub New(_Text As String, _Zoom As ENUM_ZOOM_TYPE)
+            sText = _Text
+            iZoom = _Zoom
+        End Sub
+
+        Public Overrides Function ToString() As String
+            Return sText
+        End Function
+
+    End Structure
+
+    Structure STURC_HARDWARE_ACCELERATION
+        Dim sEncoder As String
+        Dim sText As String
+
+        Sub New(_Text As String, _Encoder As String)
+            sText = _Text
+            sEncoder = _Encoder
+        End Sub
+
+        Public Overrides Function ToString() As String
+            Return sText
+        End Function
+
+    End Structure
+
     Private Sub FormMain_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         TrackBar_StabShakiness_Scroll(Nothing, Nothing)
         TrackBar_StabAccuracy_Scroll(Nothing, Nothing)
         TrackBar_StabSmooth_Scroll(Nothing, Nothing)
+        TrackBar_StabZoom_Scroll(Nothing, Nothing)
 
         ComboBox_EncodeQuality.Items.Clear()
+        ComboBox_EncodeQuality.Items.Add(New STURC_ENCODE_QUALITY("Very Low Quality (28)", 28))
         ComboBox_EncodeQuality.Items.Add(New STURC_ENCODE_QUALITY("Low Quality (22)", 22))
         ComboBox_EncodeQuality.Items.Add(New STURC_ENCODE_QUALITY("Medium Quality (18)", 18))
         ComboBox_EncodeQuality.Items.Add(New STURC_ENCODE_QUALITY("High Quality (14)", 14))
         ComboBox_EncodeQuality.Items.Add(New STURC_ENCODE_QUALITY("Very High Quality (8)", 8))
         ComboBox_EncodeQuality.Items.Add(New STURC_ENCODE_QUALITY("Lossless (0)", 0))
-        ComboBox_EncodeQuality.SelectedIndex = 1
+        ComboBox_EncodeQuality.SelectedIndex = 2
+
+        ComboBox_StabOptZoom.Items.Clear()
+        ComboBox_StabOptZoom.Items.Add(New STURC_OPTIMAL_ZOOM("Static", STURC_OPTIMAL_ZOOM.ENUM_ZOOM_TYPE.NONE))
+        ComboBox_StabOptZoom.Items.Add(New STURC_OPTIMAL_ZOOM("Dynamic zoom", STURC_OPTIMAL_ZOOM.ENUM_ZOOM_TYPE.DYNAMIC))
+        ComboBox_StabOptZoom.Items.Add(New STURC_OPTIMAL_ZOOM("Automatic zoom", STURC_OPTIMAL_ZOOM.ENUM_ZOOM_TYPE.OPTIMAL))
+        ComboBox_StabOptZoom.SelectedIndex = 1
+
+        ComboBox_HwAcceleration.Items.Clear()
+        ComboBox_HwAcceleration.Items.Add(New STURC_HARDWARE_ACCELERATION("None (Best quality)", "libx264"))
+        ComboBox_HwAcceleration.Items.Add(New STURC_HARDWARE_ACCELERATION("NVIDIA NVENC", "h264_nvenc"))
+        ComboBox_HwAcceleration.Items.Add(New STURC_HARDWARE_ACCELERATION("Intel QSV", "h264_qsv"))
+        ComboBox_HwAcceleration.Items.Add(New STURC_HARDWARE_ACCELERATION("AMD AMF", "h264_amf"))
+        ComboBox_HwAcceleration.SelectedIndex = 0
     End Sub
 
     Private Sub Button_FileOpen_Click(sender As Object, e As EventArgs) Handles Button_FileOpen.Click
@@ -77,6 +128,10 @@ Public Class FormMain
 
     Private Sub TrackBar_StabSmooth_Scroll(sender As Object, e As EventArgs) Handles TrackBar_StabSmooth.Scroll
         Label_Smoothing.Text = "Smoothing (" & TrackBar_StabSmooth.Value & ")"
+    End Sub
+
+    Private Sub TrackBar_StabZoom_Scroll(sender As Object, e As EventArgs) Handles TrackBar_StabZoom.Scroll
+        Label_StabZoom.Text = "Zoom (" & TrackBar_StabZoom.Value & "%)"
     End Sub
 
     Private Sub SetProgress(sText As String)
@@ -126,7 +181,14 @@ Public Class FormMain
             Dim bConvertH264 As Boolean = CBool(Me.Invoke(Function() CheckBox_ConvertH264.Checked))
             Dim iShakiness As Integer = CInt(Me.Invoke(Function() TrackBar_StabShakiness.Value))
             Dim iAccuracy As Integer = CInt(Me.Invoke(Function() TrackBar_StabAccuracy.Value))
+
             Dim iSmoothing As Integer = CInt(Me.Invoke(Function() TrackBar_StabSmooth.Value))
+            Dim iZoom As Integer = CInt(Me.Invoke(Function() TrackBar_StabZoom.Value))
+            Dim iZoomMethod As Integer = DirectCast(Me.Invoke(Function() ComboBox_StabOptZoom.SelectedItem), STURC_OPTIMAL_ZOOM).iZoom
+            Dim iZoomSpeed As Single = CSng(Me.Invoke(Function() NumericUpDown_StabOptZoomSpeed.Value))
+
+
+            Dim sEncoder As String = DirectCast(Me.Invoke(Function() ComboBox_HwAcceleration.SelectedItem), STURC_HARDWARE_ACCELERATION).sEncoder
             Dim iQuality As Integer = DirectCast(Me.Invoke(Function() ComboBox_EncodeQuality.SelectedItem), STURC_ENCODE_QUALITY).iCRF
             Dim bPreviewMode As Boolean = CBool(Me.Invoke(Function() CheckBox_PreviewMode.Checked))
 
@@ -160,14 +222,16 @@ Public Class FormMain
                 Me.BeginInvoke(Sub() SetProgress("Reading input file..."))
 
                 Using mProcess As New Process
-                    Dim sArguments As String = String.Format(
-                        "-i ""{0}"" -map 0:v:0 -c copy -f null -",
-                        sInputFile)
+                    Dim sArguments As New List(Of String)
+                    sArguments.Add(String.Format("-i ""{0}""", sInputFile))
+                    sArguments.Add(String.Format("-map 0:v:0"))
+                    sArguments.Add(String.Format("-c copy"))
+                    sArguments.Add(String.Format("-f null -"))
 
                     Try
                         mProcess.StartInfo.FileName = sFFmpegFile
-                        mProcess.StartInfo.Arguments = sArguments
-                        mProcess.StartInfo.WorkingDirectory = Application.StartupPath
+                        mProcess.StartInfo.Arguments = String.Join(" ", sArguments)
+                        mProcess.StartInfo.WorkingDirectory = IO.Path.GetTempPath()
 
                         mProcess.StartInfo.UseShellExecute = False
                         mProcess.StartInfo.CreateNoWindow = True
@@ -221,14 +285,38 @@ Public Class FormMain
                 Me.BeginInvoke(Sub() SetProgress("Removing duplicated frames..."))
 
                 Using mProcess As New Process
-                    Dim sArguments As String = String.Format(
-                        "-i ""{0}"" -vf ""scale={4},mpdecimate"" -c:v libx264 -preset {3} -crf {2} -c:a copy ""{1}""",
-                        sInputFile, sTmpFile, iQuality, If(bPreviewMode, "ultrafast", "slow"), If(bPreviewMode, "iw/3:ih/3", "-1:-1"))
+                    Dim sArguments As New List(Of String)
+                    sArguments.Add(String.Format("-i ""{0}""", sInputFile))
+                    sArguments.Add(String.Format("-vf ""scale={0},mpdecimate""", If(bPreviewMode, "iw/3:ih/3", "-1:-1")))
+                    sArguments.Add(String.Format("-c:v {0}", sEncoder))
+
+                    Select Case (sEncoder)
+                        Case "libx264"
+                            sArguments.Add(String.Format("-preset {0}", If(bPreviewMode, "ultrafast", "slow")))
+                            sArguments.Add(String.Format("-crf {0}", iQuality))
+                        Case "h264_nvenc"
+                            sArguments.Add(String.Format("-preset {0}", If(bPreviewMode, "fast", "medium")))
+                            sArguments.Add(String.Format("-profile:v {0}", If(bPreviewMode, "main", "high")))
+                            sArguments.Add(String.Format("-rc:v constqp -cq {0}", iQuality))
+                        Case "h264_qsv"
+                            sArguments.Add(String.Format("-preset {0}", If(bPreviewMode, "faster", "fast")))
+                            sArguments.Add(String.Format("-profile:v {0}", If(bPreviewMode, "main", "high")))
+                            sArguments.Add(String.Format("-global_quality {0}", iQuality))
+                        Case "h264_amf"
+                            sArguments.Add(String.Format("-quality {0}", If(bPreviewMode, "speed", "balanced")))
+                            sArguments.Add(String.Format("-profile:v {0}", If(bPreviewMode, "main", "high")))
+                            sArguments.Add(String.Format("-rc cqp -qp_i {0} -qp_p {0}", iQuality))
+                        Case Else
+                            Throw New ArgumentException("Unknown encoder")
+                    End Select
+
+                    sArguments.Add(String.Format("-c:a copy", sEncoder))
+                    sArguments.Add(String.Format("""{0}""", sTmpFile))
 
                     Try
                         mProcess.StartInfo.FileName = sFFmpegFile
-                        mProcess.StartInfo.Arguments = sArguments
-                        mProcess.StartInfo.WorkingDirectory = Application.StartupPath
+                        mProcess.StartInfo.Arguments = String.Join(" ", sArguments)
+                        mProcess.StartInfo.WorkingDirectory = IO.Path.GetTempPath()
 
                         mProcess.StartInfo.UseShellExecute = False
                         mProcess.StartInfo.CreateNoWindow = True
@@ -266,14 +354,38 @@ Public Class FormMain
                     Me.BeginInvoke(Sub() SetProgress("Converting video..."))
 
                     Using mProcess As New Process
-                        Dim sArguments As String = String.Format(
-                            "-i ""{0}"" -vf ""scale={4}"" -c:v libx264 -preset {3} -crf {2} -c:a copy ""{1}""",
-                            sOutputFile, sTmpFile, iQuality, If(bPreviewMode, "ultrafast", "slow"), If(bPreviewMode, "iw/3:ih/3", "-1:-1"))
+                        Dim sArguments As New List(Of String)
+                        sArguments.Add(String.Format("-i ""{0}""", sInputFile))
+                        sArguments.Add(String.Format("-vf ""scale={0}""", If(bPreviewMode, "iw/3:ih/3", "-1:-1")))
+                        sArguments.Add(String.Format("-c:v {0}", sEncoder))
+
+                        Select Case (sEncoder)
+                            Case "libx264"
+                                sArguments.Add(String.Format("-preset {0}", If(bPreviewMode, "ultrafast", "slow")))
+                                sArguments.Add(String.Format("-crf {0}", iQuality))
+                            Case "h264_nvenc"
+                                sArguments.Add(String.Format("-preset {0}", If(bPreviewMode, "fast", "medium")))
+                                sArguments.Add(String.Format("-profile:v {0}", If(bPreviewMode, "main", "high")))
+                                sArguments.Add(String.Format("-rc:v constqp -cq {0}", iQuality))
+                            Case "h264_qsv"
+                                sArguments.Add(String.Format("-preset {0}", If(bPreviewMode, "faster", "fast")))
+                                sArguments.Add(String.Format("-profile:v {0}", If(bPreviewMode, "main", "high")))
+                                sArguments.Add(String.Format("-global_quality {0}", iQuality))
+                            Case "h264_amf"
+                                sArguments.Add(String.Format("-quality {0}", If(bPreviewMode, "speed", "balanced")))
+                                sArguments.Add(String.Format("-profile:v {0}", If(bPreviewMode, "main", "high")))
+                                sArguments.Add(String.Format("-rc cqp -qp_i {0} -qp_p {0}", iQuality))
+                            Case Else
+                                Throw New ArgumentException("Unknown encoder")
+                        End Select
+
+                        sArguments.Add(String.Format("-c:a copy", sEncoder))
+                        sArguments.Add(String.Format("""{0}""", sTmpFile))
 
                         Try
                             mProcess.StartInfo.FileName = sFFmpegFile
-                            mProcess.StartInfo.Arguments = sArguments
-                            mProcess.StartInfo.WorkingDirectory = Application.StartupPath
+                            mProcess.StartInfo.Arguments = String.Join(" ", sArguments)
+                            mProcess.StartInfo.WorkingDirectory = IO.Path.GetTempPath()
 
                             mProcess.StartInfo.UseShellExecute = False
                             mProcess.StartInfo.CreateNoWindow = True
@@ -314,15 +426,18 @@ Public Class FormMain
                 ' ### vidstabdetect ###
                 Me.BeginInvoke(Sub() SetProgress("Stabilization analysis..."))
 
+                Dim sTransformFile As String = Guid.NewGuid.ToString & ".trf"
+
                 Using mProcess As New Process
-                    Dim sArguments As String = String.Format(
-                        "-i ""{0}"" -vf ""vidstabdetect=accuracy={1}:shakiness={2}:result='transforms.trf'"" -f null -",
-                        sOutputFile, iAccuracy, iShakiness)
+                    Dim sArguments As New List(Of String)
+                    sArguments.Add(String.Format("-i ""{0}""", sOutputFile))
+                    sArguments.Add(String.Format("-vf ""vidstabdetect=accuracy={0}:shakiness={1}:result='{2}'""", iAccuracy, iShakiness, sTransformFile))
+                    sArguments.Add(String.Format("-f null -"))
 
                     Try
                         mProcess.StartInfo.FileName = sFFmpegFile
-                        mProcess.StartInfo.Arguments = sArguments
-                        mProcess.StartInfo.WorkingDirectory = Application.StartupPath
+                        mProcess.StartInfo.Arguments = String.Join(" ", sArguments)
+                        mProcess.StartInfo.WorkingDirectory = IO.Path.GetTempPath()
 
                         mProcess.StartInfo.UseShellExecute = False
                         mProcess.StartInfo.CreateNoWindow = True
@@ -355,14 +470,38 @@ Public Class FormMain
                 Me.BeginInvoke(Sub() SetProgress("Stabilization process..."))
 
                 Using mProcess As New Process
-                    Dim sArguments As String = String.Format(
-                        "-i ""{0}"" -vf ""vidstabtransform=input='transforms.trf':smoothing={4}"", -c:v libx264 -preset {3} -crf {2} -c:a copy ""{1}""",
-                        sOutputFile, sTmpFile, iQuality, If(bPreviewMode, "ultrafast", "slow"), iSmoothing)
+                    Dim sArguments As New List(Of String)
+                    sArguments.Add(String.Format("-i ""{0}""", sOutputFile))
+                    sArguments.Add(String.Format("-vf ""vidstabtransform=input='{0}':smoothing={1}:zoom={2}:optzoom={3}:zoomspeed={4}""", sTransformFile, iSmoothing, iZoom, iZoomMethod, iZoomSpeed.ToString(Globalization.CultureInfo.InvariantCulture)))
+                    sArguments.Add(String.Format("-c:v {0}", sEncoder))
+
+                    Select Case (sEncoder)
+                        Case "libx264"
+                            sArguments.Add(String.Format("-preset {0}", If(bPreviewMode, "ultrafast", "slow")))
+                            sArguments.Add(String.Format("-crf {0}", iQuality))
+                        Case "h264_nvenc"
+                            sArguments.Add(String.Format("-preset {0}", If(bPreviewMode, "fast", "medium")))
+                            sArguments.Add(String.Format("-profile:v {0}", If(bPreviewMode, "main", "high")))
+                            sArguments.Add(String.Format("-rc:v constqp -cq {0}", iQuality))
+                        Case "h264_qsv"
+                            sArguments.Add(String.Format("-preset {0}", If(bPreviewMode, "faster", "fast")))
+                            sArguments.Add(String.Format("-profile:v {0}", If(bPreviewMode, "main", "high")))
+                            sArguments.Add(String.Format("-global_quality {0}", iQuality))
+                        Case "h264_amf"
+                            sArguments.Add(String.Format("-quality {0}", If(bPreviewMode, "speed", "balanced")))
+                            sArguments.Add(String.Format("-profile:v {0}", If(bPreviewMode, "main", "high")))
+                            sArguments.Add(String.Format("-rc cqp -qp_i {0} -qp_p {0}", iQuality))
+                        Case Else
+                            Throw New ArgumentException("Unknown encoder")
+                    End Select
+
+                    sArguments.Add(String.Format("-c:a copy", sEncoder))
+                    sArguments.Add(String.Format("""{0}""", sTmpFile))
 
                     Try
                         mProcess.StartInfo.FileName = sFFmpegFile
-                        mProcess.StartInfo.Arguments = sArguments
-                        mProcess.StartInfo.WorkingDirectory = Application.StartupPath
+                        mProcess.StartInfo.Arguments = String.Join(" ", sArguments)
+                        mProcess.StartInfo.WorkingDirectory = IO.Path.GetTempPath()
 
                         mProcess.StartInfo.UseShellExecute = False
                         mProcess.StartInfo.CreateNoWindow = True
