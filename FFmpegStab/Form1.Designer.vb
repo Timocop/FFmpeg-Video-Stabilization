@@ -44,6 +44,7 @@ Partial Class FormMain
         Me.CheckBox_ConvertH264 = New System.Windows.Forms.CheckBox()
         Me.ComboBox_EncodeQuality = New System.Windows.Forms.ComboBox()
         Me.Label5 = New System.Windows.Forms.Label()
+        Me.ProgressBar_Progress = New System.Windows.Forms.ProgressBar()
         Me.GroupBox1.SuspendLayout()
         Me.GroupBox2.SuspendLayout()
         CType(Me.TrackBar_StabSmooth, System.ComponentModel.ISupportInitialize).BeginInit()
@@ -292,12 +293,22 @@ Partial Class FormMain
         Me.Label5.TabIndex = 11
         Me.Label5.Text = "Encode Quality"
         '
+        'ProgressBar_Progress
+        '
+        Me.ProgressBar_Progress.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.ProgressBar_Progress.Location = New System.Drawing.Point(268, 278)
+        Me.ProgressBar_Progress.Name = "ProgressBar_Progress"
+        Me.ProgressBar_Progress.Size = New System.Drawing.Size(306, 23)
+        Me.ProgressBar_Progress.TabIndex = 12
+        '
         'FormMain
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(96.0!, 96.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi
         Me.BackColor = System.Drawing.Color.White
         Me.ClientSize = New System.Drawing.Size(667, 313)
+        Me.Controls.Add(Me.ProgressBar_Progress)
         Me.Controls.Add(Me.Label5)
         Me.Controls.Add(Me.ComboBox_EncodeQuality)
         Me.Controls.Add(Me.GroupBox3)
@@ -316,6 +327,7 @@ Partial Class FormMain
         Me.MinimizeBox = False
         Me.Name = "FormMain"
         Me.ShowIcon = False
+        Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
         Me.Text = "FFmpeg Video Stabilization"
         Me.GroupBox1.ResumeLayout(False)
         Me.GroupBox1.PerformLayout()
@@ -353,4 +365,5 @@ Partial Class FormMain
     Friend WithEvents CheckBox_ConvertH264 As CheckBox
     Friend WithEvents ComboBox_EncodeQuality As ComboBox
     Friend WithEvents Label5 As Label
+    Friend WithEvents ProgressBar_Progress As ProgressBar
 End Class

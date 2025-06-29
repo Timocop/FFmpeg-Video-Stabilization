@@ -1,4 +1,6 @@
-﻿Public Class FormMain
+﻿Imports System.Text.RegularExpressions
+
+Public Class FormMain
 
     Private g_mProcessingThread As Threading.Thread = Nothing
 
@@ -26,6 +28,7 @@
         ComboBox_EncodeQuality.Items.Add(New STURC_ENCODE_QUALITY("Low Quality (22)", 22))
         ComboBox_EncodeQuality.Items.Add(New STURC_ENCODE_QUALITY("Medium Quality (18)", 18))
         ComboBox_EncodeQuality.Items.Add(New STURC_ENCODE_QUALITY("High Quality (14)", 14))
+        ComboBox_EncodeQuality.Items.Add(New STURC_ENCODE_QUALITY("Very High Quality (8)", 8))
         ComboBox_EncodeQuality.Items.Add(New STURC_ENCODE_QUALITY("Lossless (0)", 0))
         ComboBox_EncodeQuality.SelectedIndex = 1
     End Sub
@@ -49,6 +52,13 @@
 
     Private Sub Button_FileProcess_Click(sender As Object, e As EventArgs) Handles Button_FileProcess.Click
         If (g_mProcessingThread IsNot Nothing AndAlso g_mProcessingThread.IsAlive) Then
+            g_mProcessingThread.Abort()
+            g_mProcessingThread.Join()
+            g_mProcessingThread = Nothing
+
+            SetProgress("Done.")
+            Button_FileProcess.Text = "Process"
+            ProgressBar_Progress.Value = 100
             Return
         End If
 
@@ -73,9 +83,32 @@
         Me.Text = String.Format("FFmpeg Video Stabilization - {0}", sText)
     End Sub
 
+    Private Sub ParseFrameProgress(sData As String, iProcessedFrames As Long, iMaxProcessedFrames As Long)
+        If (iMaxProcessedFrames < 1) Then
+            Return
+        End If
+
+        Dim mMatch = Regex.Match(sData, "^frame=\s*(?<Frames>\d+)", RegexOptions.Multiline)
+        If (mMatch.Success) Then
+            Dim iFrame As Long = Long.Parse(mMatch.Groups("Frames").Value)
+            Dim iProgress As Integer = CInt(((iProcessedFrames + iFrame) / iMaxProcessedFrames) * 100)
+
+            If (iProgress < 0) Then
+                iProgress = 0
+            End If
+
+            If (iProgress > 100) Then
+                iProgress = 100
+            End If
+
+            Me.BeginInvoke(Sub() ProgressBar_Progress.Value = iProgress)
+        End If
+    End Sub
+
     Private Sub ThreadProcess()
         Try
-            Me.Invoke(Sub() SetProgress("Starting..."))
+            Me.BeginInvoke(Sub() SetProgress("Starting..."))
+            Me.BeginInvoke(Sub() Button_FileProcess.Text = "Abort")
 
             Dim sInputFile As String = CStr(Me.Invoke(Function() TextBox_FileInput.Text))
             Dim sOutputFile As String = CStr(Me.Invoke(Function() TextBox_FileOutput.Text))
@@ -90,24 +123,164 @@
 
             Dim sFFmpegFile As String = IO.Path.Combine(Application.StartupPath, "ffmpeg.exe")
 
+            Dim iTotalFrames As Long = -1
+            Dim iProcessedMaxFrames As Long = 0
+            Dim iProcessedCurrentFrames As Long = 0
+
+            Dim mProgressHandler As DataReceivedEventHandler = Sub(sender As Object, e As DataReceivedEventArgs)
+                                                                   If (String.IsNullOrEmpty(e.Data)) Then
+                                                                       Return
+                                                                   End If
+
+                                                                   ParseFrameProgress(e.Data, iProcessedCurrentFrames, iProcessedMaxFrames)
+                                                               End Sub
+
+            If (String.IsNullOrEmpty(sInputFile) OrElse sInputFile.Trim.Length = 0) Then
+                Throw New ArgumentException("Invalid input file")
+            End If
+
+            If (String.IsNullOrEmpty(sOutputFile) OrElse sOutputFile.Trim.Length = 0) Then
+                Throw New ArgumentException("Invalid output file")
+            End If
+
+            If (Not IO.File.Exists(sInputFile)) Then
+                Throw New ArgumentException("Input file does not exist")
+            End If
+
             IO.File.Copy(sInputFile, sOutputFile, True)
+
+            If (True) Then
+                Me.BeginInvoke(Sub() SetProgress("Reading input file..."))
+
+                Using mProcess As New Process
+                    Dim sArguments As String = String.Format("-i ""{0}"" -map 0:v:0 -c copy -f null -", sOutputFile)
+
+                    Try
+                        mProcess.StartInfo.FileName = sFFmpegFile
+                        mProcess.StartInfo.Arguments = sArguments
+                        mProcess.StartInfo.WorkingDirectory = Application.StartupPath
+
+                        mProcess.StartInfo.UseShellExecute = False
+                        mProcess.StartInfo.CreateNoWindow = True
+                        mProcess.StartInfo.RedirectStandardError = True
+
+                        mProcess.Start()
+
+                        Dim sOutput As String = mProcess.StandardError.ReadToEnd()
+                        Dim mMatches = Regex.Match(sOutput, "^frame=\s*(?<TotalFrames>\d+)", RegexOptions.Multiline)
+                        If (mMatches.Success AndAlso mMatches.Groups("TotalFrames").Success) Then
+                            iTotalFrames = CInt(mMatches.Groups("TotalFrames").Value)
+
+                            If (bRemoveDup) Then
+                                iProcessedMaxFrames += iTotalFrames
+                            Else
+                                If (bConvertH264) Then
+                                    iProcessedMaxFrames += iTotalFrames
+                                End If
+                            End If
+
+                            iProcessedMaxFrames += iTotalFrames * 2
+                        End If
+
+                        'mProcess.WaitForExit dead-lock because BeginErrorReadLine()
+                        While (Not mProcess.HasExited)
+                            Threading.Thread.Sleep(10)
+                        End While
+
+                        If (mProcess.ExitCode <> 0) Then
+                            Throw New ArgumentException("FFmpeg failed with exit code " & mProcess.ExitCode)
+                        End If
+                    Finally
+                        Try
+                            mProcess.Kill()
+                        Catch ex As Exception
+                        End Try
+                    End Try
+                End Using
+            End If
 
             If (bRemoveDup) Then
                 ' ### mpdecimate ###
-                Me.Invoke(Sub() SetProgress("Removing duplicated frames..."))
+                Me.BeginInvoke(Sub() SetProgress("Removing duplicated frames..."))
 
-                Dim sArguments As String = String.Format("-i ""{0}"" -vf mpdecimate -c:v libx264 -preset medium -crf {2} -c:a copy ""{1}""", sOutputFile, sTmpFile, iQuality)
-                ExecuteProgram(sFFmpegFile, sArguments, Application.StartupPath, 0)
+                Using mProcess As New Process
+                    Dim sArguments As String = String.Format("-i ""{0}"" -vf mpdecimate -c:v libx264 -preset medium -crf {2} -c:a copy ""{1}""", sOutputFile, sTmpFile, iQuality)
+
+                    Try
+                        mProcess.StartInfo.FileName = sFFmpegFile
+                        mProcess.StartInfo.Arguments = sArguments
+                        mProcess.StartInfo.WorkingDirectory = Application.StartupPath
+
+                        mProcess.StartInfo.UseShellExecute = False
+                        mProcess.StartInfo.CreateNoWindow = True
+                        mProcess.StartInfo.RedirectStandardError = True
+
+                        AddHandler mProcess.ErrorDataReceived, mProgressHandler
+
+                        mProcess.Start()
+                        mProcess.BeginErrorReadLine()
+
+                        'mProcess.WaitForExit dead-lock because BeginErrorReadLine()
+                        While (Not mProcess.HasExited)
+                            Threading.Thread.Sleep(10)
+                        End While
+
+                        If (mProcess.ExitCode <> 0) Then
+                            Throw New ArgumentException("FFmpeg failed with exit code " & mProcess.ExitCode)
+                        End If
+                    Finally
+                        RemoveHandler mProcess.ErrorDataReceived, mProgressHandler
+                        iProcessedCurrentFrames += iTotalFrames
+
+                        Try
+                            mProcess.Kill()
+                        Catch ex As Exception
+                        End Try
+                    End Try
+                End Using
 
                 IO.File.Copy(sTmpFile, sOutputFile, True)
                 IO.File.Delete(sTmpFile)
             Else
                 If (bConvertH264) Then
-                    ' ### mpdecimate ###
-                    Me.Invoke(Sub() SetProgress("Converting video..."))
+                    ' ### convert ###
+                    Me.BeginInvoke(Sub() SetProgress("Converting video..."))
 
-                    Dim sArguments As String = String.Format("-i ""{0}"" -c:v libx264 -preset medium -crf {2} -c:a copy ""{1}""", sOutputFile, sTmpFile, iQuality)
-                    ExecuteProgram(sFFmpegFile, sArguments, Application.StartupPath, 0)
+                    Using mProcess As New Process
+                        Dim sArguments As String = String.Format("-i ""{0}"" -c:v libx264 -preset medium -crf {2} -c:a copy ""{1}""", sOutputFile, sTmpFile, iQuality)
+
+                        Try
+                            mProcess.StartInfo.FileName = sFFmpegFile
+                            mProcess.StartInfo.Arguments = sArguments
+                            mProcess.StartInfo.WorkingDirectory = Application.StartupPath
+
+                            mProcess.StartInfo.UseShellExecute = False
+                            mProcess.StartInfo.CreateNoWindow = True
+                            mProcess.StartInfo.RedirectStandardError = True
+
+                            AddHandler mProcess.ErrorDataReceived, mProgressHandler
+
+                            mProcess.Start()
+                            mProcess.BeginErrorReadLine()
+
+                            'mProcess.WaitForExit dead-lock because BeginErrorReadLine()
+                            While (Not mProcess.HasExited)
+                                Threading.Thread.Sleep(10)
+                            End While
+
+                            If (mProcess.ExitCode <> 0) Then
+                                Throw New ArgumentException("FFmpeg failed with exit code " & mProcess.ExitCode)
+                            End If
+                        Finally
+                            RemoveHandler mProcess.ErrorDataReceived, mProgressHandler
+                            iProcessedCurrentFrames += iTotalFrames
+
+                            Try
+                                mProcess.Kill()
+                            Catch ex As Exception
+                            End Try
+                        End Try
+                    End Using
 
                     IO.File.Copy(sTmpFile, sOutputFile, True)
                     IO.File.Delete(sTmpFile)
@@ -116,65 +289,99 @@
 
             If (True) Then
                 ' ### vidstabdetect ###
-                Me.Invoke(Sub() SetProgress("Stabilization analysis..."))
+                Me.BeginInvoke(Sub() SetProgress("Stabilization analysis..."))
 
-                Dim sArgumentsPre As String = String.Format("-i ""{0}"" -vf ""vidstabdetect=accuracy={1}:shakiness={2}:result='transforms.trf'"" -f null -", sOutputFile, iAccuracy, iShakiness)
-                ExecuteProgram(sFFmpegFile, sArgumentsPre, Application.StartupPath, 0)
+                Using mProcess As New Process
+                    Dim sArguments As String = String.Format("-i ""{0}"" -vf ""vidstabdetect=accuracy={1}:shakiness={2}:result='transforms.trf'"" -f null -", sOutputFile, iAccuracy, iShakiness)
 
-                Me.Invoke(Sub() SetProgress("Stabilization process..."))
+                    Try
+                        mProcess.StartInfo.FileName = sFFmpegFile
+                        mProcess.StartInfo.Arguments = sArguments
+                        mProcess.StartInfo.WorkingDirectory = Application.StartupPath
 
-                Dim sArgumentsPost As String = String.Format("-i ""{0}"" -vf ""vidstabtransform=input='transforms.trf':smoothing={3}"", -c:v libx264 -preset medium -crf {2} -c:a copy ""{1}""", sOutputFile, sTmpFile, iQuality, iSmoothing)
-                ExecuteProgram(sFFmpegFile, sArgumentsPost, Application.StartupPath, 0)
+                        mProcess.StartInfo.UseShellExecute = False
+                        mProcess.StartInfo.CreateNoWindow = True
+                        mProcess.StartInfo.RedirectStandardError = True
+
+                        AddHandler mProcess.ErrorDataReceived, mProgressHandler
+
+                        mProcess.Start()
+                        mProcess.BeginErrorReadLine()
+
+                        'mProcess.WaitForExit dead-lock because BeginErrorReadLine()
+                        While (Not mProcess.HasExited)
+                            Threading.Thread.Sleep(10)
+                        End While
+
+                        If (mProcess.ExitCode <> 0) Then
+                            Throw New ArgumentException("FFmpeg failed with exit code " & mProcess.ExitCode)
+                        End If
+                    Finally
+                        RemoveHandler mProcess.ErrorDataReceived, mProgressHandler
+                        iProcessedCurrentFrames += iTotalFrames
+
+                        Try
+                            mProcess.Kill()
+                        Catch ex As Exception
+                        End Try
+                    End Try
+                End Using
+
+                Me.BeginInvoke(Sub() SetProgress("Stabilization process..."))
+
+                Using mProcess As New Process
+                    Dim sArguments As String = String.Format("-i ""{0}"" -vf ""vidstabtransform=input='transforms.trf':smoothing={3}"", -c:v libx264 -preset medium -crf {2} -c:a copy ""{1}""", sOutputFile, sTmpFile, iQuality, iSmoothing)
+
+                    Try
+                        mProcess.StartInfo.FileName = sFFmpegFile
+                        mProcess.StartInfo.Arguments = sArguments
+                        mProcess.StartInfo.WorkingDirectory = Application.StartupPath
+
+                        mProcess.StartInfo.UseShellExecute = False
+                        mProcess.StartInfo.CreateNoWindow = True
+                        mProcess.StartInfo.RedirectStandardError = True
+
+                        AddHandler mProcess.ErrorDataReceived, mProgressHandler
+
+                        mProcess.Start()
+                        mProcess.BeginErrorReadLine()
+
+                        'mProcess.WaitForExit dead-lock because BeginErrorReadLine()
+                        While (Not mProcess.HasExited)
+                            Threading.Thread.Sleep(10)
+                        End While
+
+                        If (mProcess.ExitCode <> 0) Then
+                            Throw New ArgumentException("FFmpeg failed with exit code " & mProcess.ExitCode)
+                        End If
+                    Finally
+                        RemoveHandler mProcess.ErrorDataReceived, mProgressHandler
+                        iProcessedCurrentFrames += iTotalFrames
+
+                        Try
+                            mProcess.Kill()
+                        Catch ex As Exception
+                        End Try
+                    End Try
+                End Using
 
                 IO.File.Copy(sTmpFile, sOutputFile, True)
                 IO.File.Delete(sTmpFile)
             End If
 
             Me.BeginInvoke(Sub() SetProgress("Done."))
-            MessageBox.Show("Done.", "Finished", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Me.BeginInvoke(Sub() Button_FileProcess.Text = "Process")
+            Me.BeginInvoke(Sub() ProgressBar_Progress.Value = 100)
 
         Catch ex As Threading.ThreadAbortException
             Throw
 
         Catch ex As Exception
             Me.BeginInvoke(Sub() SetProgress("Error."))
+            Me.BeginInvoke(Sub() Button_FileProcess.Text = "Process")
+            Me.BeginInvoke(Sub() ProgressBar_Progress.Value = 100)
             MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
-    End Sub
-
-    Private Sub ExecuteProgram(sPath As String, sArguments As String, sWorkingDirectory As String, ByRef r_ExitCode As Integer)
-        ExecuteProgram(sPath, sArguments, sWorkingDirectory, Nothing, r_ExitCode)
-    End Sub
-
-    Private Sub ExecuteProgram(sPath As String, sArguments As String, sWorkingDirectory As String, mEnvironmentVariables As Dictionary(Of String, String), ByRef r_ExitCode As Integer)
-        r_ExitCode = 0
-
-        Using i As New Process
-            Try
-                i.StartInfo.FileName = sPath
-                i.StartInfo.Arguments = sArguments
-                i.StartInfo.WorkingDirectory = sWorkingDirectory
-
-                i.StartInfo.UseShellExecute = False
-                i.StartInfo.CreateNoWindow = True
-                i.StartInfo.RedirectStandardOutput = True
-
-                If (mEnvironmentVariables IsNot Nothing) Then
-                    For Each mVar In mEnvironmentVariables
-                        i.StartInfo.EnvironmentVariables(mVar.Key) = mVar.Value
-                    Next
-                End If
-
-                i.Start()
-                i.WaitForExit()
-
-                r_ExitCode = i.ExitCode
-            Finally
-                If (Not i.HasExited) Then
-                    i.Kill()
-                End If
-            End Try
-        End Using
     End Sub
 
     Private Sub FormMain_FormClosed(sender As Object, e As FormClosedEventArgs) Handles Me.FormClosed
