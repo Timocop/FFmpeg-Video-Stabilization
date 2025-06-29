@@ -88,20 +88,27 @@ Public Class FormMain
             Return
         End If
 
-        Dim mMatch = Regex.Match(sData, "^frame=\s*(?<Frames>\d+)", RegexOptions.Multiline)
-        If (mMatch.Success) Then
-            Dim iFrame As Long = Long.Parse(mMatch.Groups("Frames").Value)
-            Dim iProgress As Integer = CInt(((iProcessedFrames + iFrame) / iMaxProcessedFrames) * 100)
+        'Fix newlines
+        sData = String.Join(Environment.NewLine, sData.Split(New String() {vbCrLf, vbCr, vbLf}, StringSplitOptions.None))
 
-            If (iProgress < 0) Then
-                iProgress = 0
+        Dim mMatches = Regex.Matches(sData, "^frame=\s*(?<Frames>\d+)", RegexOptions.Multiline)
+        If (mMatches.Count > 0) Then
+            Dim mLastMatch = mMatches(mMatches.Count - 1)
+
+            If (mLastMatch.Success) Then
+                Dim iFrame As Long = Long.Parse(mLastMatch.Groups("Frames").Value)
+                Dim iProgress As Integer = CInt(((iProcessedFrames + iFrame) / iMaxProcessedFrames) * 100)
+
+                If (iProgress < 0) Then
+                    iProgress = 0
+                End If
+
+                If (iProgress > 100) Then
+                    iProgress = 100
+                End If
+
+                Me.BeginInvoke(Sub() ProgressBar_Progress.Value = iProgress)
             End If
-
-            If (iProgress > 100) Then
-                iProgress = 100
-            End If
-
-            Me.BeginInvoke(Sub() ProgressBar_Progress.Value = iProgress)
         End If
     End Sub
 
@@ -109,6 +116,7 @@ Public Class FormMain
         Try
             Me.BeginInvoke(Sub() SetProgress("Starting..."))
             Me.BeginInvoke(Sub() Button_FileProcess.Text = "Abort")
+            Me.BeginInvoke(Sub() ProgressBar_Progress.Value = 0)
 
             Dim sInputFile As String = CStr(Me.Invoke(Function() TextBox_FileInput.Text))
             Dim sOutputFile As String = CStr(Me.Invoke(Function() TextBox_FileOutput.Text))
@@ -120,6 +128,7 @@ Public Class FormMain
             Dim iAccuracy As Integer = CInt(Me.Invoke(Function() TrackBar_StabAccuracy.Value))
             Dim iSmoothing As Integer = CInt(Me.Invoke(Function() TrackBar_StabSmooth.Value))
             Dim iQuality As Integer = DirectCast(Me.Invoke(Function() ComboBox_EncodeQuality.SelectedItem), STURC_ENCODE_QUALITY).iCRF
+            Dim bPreviewMode As Boolean = CBool(Me.Invoke(Function() CheckBox_PreviewMode.Checked))
 
             Dim sFFmpegFile As String = IO.Path.Combine(Application.StartupPath, "ffmpeg.exe")
 
@@ -147,13 +156,13 @@ Public Class FormMain
                 Throw New ArgumentException("Input file does not exist")
             End If
 
-            IO.File.Copy(sInputFile, sOutputFile, True)
-
             If (True) Then
                 Me.BeginInvoke(Sub() SetProgress("Reading input file..."))
 
                 Using mProcess As New Process
-                    Dim sArguments As String = String.Format("-i ""{0}"" -map 0:v:0 -c copy -f null -", sOutputFile)
+                    Dim sArguments As String = String.Format(
+                        "-i ""{0}"" -map 0:v:0 -c copy -f null -",
+                        sInputFile)
 
                     Try
                         mProcess.StartInfo.FileName = sFFmpegFile
@@ -167,19 +176,27 @@ Public Class FormMain
                         mProcess.Start()
 
                         Dim sOutput As String = mProcess.StandardError.ReadToEnd()
-                        Dim mMatches = Regex.Match(sOutput, "^frame=\s*(?<TotalFrames>\d+)", RegexOptions.Multiline)
-                        If (mMatches.Success AndAlso mMatches.Groups("TotalFrames").Success) Then
-                            iTotalFrames = CInt(mMatches.Groups("TotalFrames").Value)
 
-                            If (bRemoveDup) Then
-                                iProcessedMaxFrames += iTotalFrames
-                            Else
-                                If (bConvertH264) Then
+                        'Fix newlines
+                        sOutput = String.Join(Environment.NewLine, sOutput.Split(New String() {vbCrLf, vbCr, vbLf}, StringSplitOptions.None))
+
+                        Dim mMatches = Regex.Matches(sOutput, "^frame=\s*(?<TotalFrames>\d+)", RegexOptions.Multiline)
+
+                        If (mMatches.Count > 0) Then
+                            Dim mLastMatch = mMatches(mMatches.Count - 1)
+                            If (mLastMatch.Success AndAlso mLastMatch.Groups("TotalFrames").Success) Then
+                                iTotalFrames = CInt(mLastMatch.Groups("TotalFrames").Value)
+
+                                If (bRemoveDup) Then
                                     iProcessedMaxFrames += iTotalFrames
+                                Else
+                                    If (bConvertH264) Then
+                                        iProcessedMaxFrames += iTotalFrames
+                                    End If
                                 End If
-                            End If
 
-                            iProcessedMaxFrames += iTotalFrames * 2
+                                iProcessedMaxFrames += iTotalFrames * 2
+                            End If
                         End If
 
                         'mProcess.WaitForExit dead-lock because BeginErrorReadLine()
@@ -204,7 +221,9 @@ Public Class FormMain
                 Me.BeginInvoke(Sub() SetProgress("Removing duplicated frames..."))
 
                 Using mProcess As New Process
-                    Dim sArguments As String = String.Format("-i ""{0}"" -vf mpdecimate -c:v libx264 -preset medium -crf {2} -c:a copy ""{1}""", sOutputFile, sTmpFile, iQuality)
+                    Dim sArguments As String = String.Format(
+                        "-i ""{0}"" -vf ""scale={4},mpdecimate"" -c:v libx264 -preset {3} -crf {2} -c:a copy ""{1}""",
+                        sInputFile, sTmpFile, iQuality, If(bPreviewMode, "ultrafast", "slow"), If(bPreviewMode, "iw/3:ih/3", "-1:-1"))
 
                     Try
                         mProcess.StartInfo.FileName = sFFmpegFile
@@ -239,15 +258,17 @@ Public Class FormMain
                     End Try
                 End Using
 
-                IO.File.Copy(sTmpFile, sOutputFile, True)
-                IO.File.Delete(sTmpFile)
+                IO.File.Delete(sOutputFile)
+                IO.File.Move(sTmpFile, sOutputFile)
             Else
                 If (bConvertH264) Then
                     ' ### convert ###
                     Me.BeginInvoke(Sub() SetProgress("Converting video..."))
 
                     Using mProcess As New Process
-                        Dim sArguments As String = String.Format("-i ""{0}"" -c:v libx264 -preset medium -crf {2} -c:a copy ""{1}""", sOutputFile, sTmpFile, iQuality)
+                        Dim sArguments As String = String.Format(
+                            "-i ""{0}"" -vf ""scale={4}"" -c:v libx264 -preset {3} -crf {2} -c:a copy ""{1}""",
+                            sOutputFile, sTmpFile, iQuality, If(bPreviewMode, "ultrafast", "slow"), If(bPreviewMode, "iw/3:ih/3", "-1:-1"))
 
                         Try
                             mProcess.StartInfo.FileName = sFFmpegFile
@@ -282,8 +303,10 @@ Public Class FormMain
                         End Try
                     End Using
 
-                    IO.File.Copy(sTmpFile, sOutputFile, True)
-                    IO.File.Delete(sTmpFile)
+                    IO.File.Delete(sOutputFile)
+                    IO.File.Move(sTmpFile, sOutputFile)
+                Else
+                    IO.File.Copy(sInputFile, sOutputFile, True)
                 End If
             End If
 
@@ -292,7 +315,9 @@ Public Class FormMain
                 Me.BeginInvoke(Sub() SetProgress("Stabilization analysis..."))
 
                 Using mProcess As New Process
-                    Dim sArguments As String = String.Format("-i ""{0}"" -vf ""vidstabdetect=accuracy={1}:shakiness={2}:result='transforms.trf'"" -f null -", sOutputFile, iAccuracy, iShakiness)
+                    Dim sArguments As String = String.Format(
+                        "-i ""{0}"" -vf ""vidstabdetect=accuracy={1}:shakiness={2}:result='transforms.trf'"" -f null -",
+                        sOutputFile, iAccuracy, iShakiness)
 
                     Try
                         mProcess.StartInfo.FileName = sFFmpegFile
@@ -330,7 +355,9 @@ Public Class FormMain
                 Me.BeginInvoke(Sub() SetProgress("Stabilization process..."))
 
                 Using mProcess As New Process
-                    Dim sArguments As String = String.Format("-i ""{0}"" -vf ""vidstabtransform=input='transforms.trf':smoothing={3}"", -c:v libx264 -preset medium -crf {2} -c:a copy ""{1}""", sOutputFile, sTmpFile, iQuality, iSmoothing)
+                    Dim sArguments As String = String.Format(
+                        "-i ""{0}"" -vf ""vidstabtransform=input='transforms.trf':smoothing={4}"", -c:v libx264 -preset {3} -crf {2} -c:a copy ""{1}""",
+                        sOutputFile, sTmpFile, iQuality, If(bPreviewMode, "ultrafast", "slow"), iSmoothing)
 
                     Try
                         mProcess.StartInfo.FileName = sFFmpegFile
@@ -365,8 +392,8 @@ Public Class FormMain
                     End Try
                 End Using
 
-                IO.File.Copy(sTmpFile, sOutputFile, True)
-                IO.File.Delete(sTmpFile)
+                IO.File.Delete(sOutputFile)
+                IO.File.Move(sTmpFile, sOutputFile)
             End If
 
             Me.BeginInvoke(Sub() SetProgress("Done."))

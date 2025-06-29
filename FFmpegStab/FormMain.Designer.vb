@@ -22,6 +22,7 @@ Partial Class FormMain
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
+        Me.components = New System.ComponentModel.Container()
         Me.Button_FileOpen = New System.Windows.Forms.Button()
         Me.TextBox_FileInput = New System.Windows.Forms.TextBox()
         Me.TextBox_FileOutput = New System.Windows.Forms.TextBox()
@@ -45,6 +46,8 @@ Partial Class FormMain
         Me.ComboBox_EncodeQuality = New System.Windows.Forms.ComboBox()
         Me.Label5 = New System.Windows.Forms.Label()
         Me.ProgressBar_Progress = New System.Windows.Forms.ProgressBar()
+        Me.CheckBox_PreviewMode = New System.Windows.Forms.CheckBox()
+        Me.ToolTip1 = New System.Windows.Forms.ToolTip(Me.components)
         Me.GroupBox1.SuspendLayout()
         Me.GroupBox2.SuspendLayout()
         CType(Me.TrackBar_StabSmooth, System.ComponentModel.ISupportInitialize).BeginInit()
@@ -231,7 +234,7 @@ Partial Class FormMain
         'Button_FileProcess
         '
         Me.Button_FileProcess.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.Button_FileProcess.Location = New System.Drawing.Point(580, 278)
+        Me.Button_FileProcess.Location = New System.Drawing.Point(580, 323)
         Me.Button_FileProcess.Name = "Button_FileProcess"
         Me.Button_FileProcess.Size = New System.Drawing.Size(75, 23)
         Me.Button_FileProcess.TabIndex = 8
@@ -278,7 +281,7 @@ Partial Class FormMain
         Me.ComboBox_EncodeQuality.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left), System.Windows.Forms.AnchorStyles)
         Me.ComboBox_EncodeQuality.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
         Me.ComboBox_EncodeQuality.FormattingEnabled = True
-        Me.ComboBox_EncodeQuality.Location = New System.Drawing.Point(102, 280)
+        Me.ComboBox_EncodeQuality.Location = New System.Drawing.Point(102, 325)
         Me.ComboBox_EncodeQuality.Name = "ComboBox_EncodeQuality"
         Me.ComboBox_EncodeQuality.Size = New System.Drawing.Size(160, 21)
         Me.ComboBox_EncodeQuality.TabIndex = 10
@@ -287,7 +290,7 @@ Partial Class FormMain
         '
         Me.Label5.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left), System.Windows.Forms.AnchorStyles)
         Me.Label5.AutoSize = True
-        Me.Label5.Location = New System.Drawing.Point(12, 283)
+        Me.Label5.Location = New System.Drawing.Point(12, 328)
         Me.Label5.Name = "Label5"
         Me.Label5.Size = New System.Drawing.Size(84, 13)
         Me.Label5.TabIndex = 11
@@ -297,17 +300,30 @@ Partial Class FormMain
         '
         Me.ProgressBar_Progress.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.ProgressBar_Progress.Location = New System.Drawing.Point(268, 278)
+        Me.ProgressBar_Progress.Location = New System.Drawing.Point(268, 323)
         Me.ProgressBar_Progress.Name = "ProgressBar_Progress"
         Me.ProgressBar_Progress.Size = New System.Drawing.Size(306, 23)
         Me.ProgressBar_Progress.TabIndex = 12
+        '
+        'CheckBox_PreviewMode
+        '
+        Me.CheckBox_PreviewMode.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left), System.Windows.Forms.AnchorStyles)
+        Me.CheckBox_PreviewMode.AutoSize = True
+        Me.CheckBox_PreviewMode.Location = New System.Drawing.Point(12, 302)
+        Me.CheckBox_PreviewMode.Name = "CheckBox_PreviewMode"
+        Me.CheckBox_PreviewMode.Size = New System.Drawing.Size(98, 17)
+        Me.CheckBox_PreviewMode.TabIndex = 13
+        Me.CheckBox_PreviewMode.Text = "Preview Mode"
+        Me.ToolTip1.SetToolTip(Me.CheckBox_PreviewMode, "Speeds up the encoding by reducing the video resolution and faster compression")
+        Me.CheckBox_PreviewMode.UseVisualStyleBackColor = True
         '
         'FormMain
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(96.0!, 96.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi
         Me.BackColor = System.Drawing.Color.White
-        Me.ClientSize = New System.Drawing.Size(667, 313)
+        Me.ClientSize = New System.Drawing.Size(667, 358)
+        Me.Controls.Add(Me.CheckBox_PreviewMode)
         Me.Controls.Add(Me.ProgressBar_Progress)
         Me.Controls.Add(Me.Label5)
         Me.Controls.Add(Me.ComboBox_EncodeQuality)
@@ -366,4 +382,6 @@ Partial Class FormMain
     Friend WithEvents ComboBox_EncodeQuality As ComboBox
     Friend WithEvents Label5 As Label
     Friend WithEvents ProgressBar_Progress As ProgressBar
+    Friend WithEvents CheckBox_PreviewMode As CheckBox
+    Friend WithEvents ToolTip1 As ToolTip
 End Class
